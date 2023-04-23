@@ -6,10 +6,13 @@ import Row from 'react-bootstrap/Row'
 import { toast } from 'react-toastify';
 import { auth } from '../Firebase/firebase-config';
 import { createUserWithEmailAndPassword } from 'firebase/auth'
-import { doc, setDoc } from 'firebase/firestore';
+import { setDoc, doc } from 'firebase/firestore';
+import { db } from '../Firebase/firebase-config'
+import { useNavigate } from "react-router-dom";
 
 export const Signup = () => {
 
+    const navigate = useNavigate();
     const [fromData, setFromData] = useState({});
     const [error, setError] = useState('')
 
@@ -23,7 +26,7 @@ export const Signup = () => {
 
             !/[0-9]/.test(value) && setError('Password  must include number');
             !/[A-Z]/.test(value) && setError('Password  must include Uppercase');
-            !/[a-z]/.test(value) && setError('Password  must include Uppercase');
+            !/[a-z]/.test(value) && setError('Password  must include Lowercase');
         }
 
         setFromData(
@@ -35,28 +38,42 @@ export const Signup = () => {
     }
 
     const handelOnsubmit = async (e) => {
-        e.preventDefault();
-        const { confirmPassword, password, email } = fromData;
-        if (confirmPassword !== password) {
-            toast.error('Passwor do not match')
+        try {
+            e.preventDefault();
+            const { confirmPassword, password, email } = fromData;
+            if (confirmPassword !== password) {
+                toast.error('Passwor do not match')
 
-        }
-        const userCredential = createUserWithEmailAndPassword(auth, email, password);
-
-        toast.promise(userCredential,
-            {
-                pending: ' Please wait'
             }
-        )
-        const { user } = await userCredential;
-        if (user?.uid) {
-            toast.success('User has been registered.')
-            //user is registered now lets add them in our database fot the future post
-            console.log(user)
+            const pendingState = createUserWithEmailAndPassword(auth, email, password);
 
-            //send user to the dashboard
+            toast.promise(pendingState,
+                {
+                    pending: ' Please wait'
+                }
+            )
+            const { user } = await pendingState;
+            if (user?.uid) {
+                toast.success('User has been registered you can login now')
+                //user is registered now lets add them in our database fot the future post
+                const userObj = {
+                    fName: fromData.fName,
+                    lName: fromData.lName,
+                    email,
+                }
+
+                await setDoc(doc(db, 'users', user.uid), userObj)
+
+                //send user to the dashboard
+                // navigate('/dashboard')
+
+
+                // setDoc
+            }
+        } catch (error) {
+            toast.error(error.message)
+
         }
-
     };
 
 
